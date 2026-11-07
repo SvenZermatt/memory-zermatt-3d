@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Memory Zermatt · 3D-Balkonblick</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cesium@1.132.0/Build/Cesium/Widgets/widgets.css">
+<script src="https://cdn.jsdelivr.net/npm/cesium@1.132.0/Build/Cesium/Cesium.js"></script>
+<style>
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;font-family:system-ui,Arial,sans-serif;background:#0d2131;color:#183043}
+#map{position:absolute;inset:0}
+aside{position:absolute;z-index:5;top:12px;left:12px;width:360px;max-height:calc(100% - 24px);overflow:auto;background:#fffffff4;border-radius:14px;padding:17px;box-shadow:0 8px 36px #10212d77}
+small{color:#6b7c86;font-size:11px}h1{font-size:20px;margin:0 0 6px}h2{font-size:13px;margin:18px 0 8px}p{font-size:12px;color:#536775;line-height:1.45}
+.accent{font-size:11px;text-transform:uppercase;font-weight:800;letter-spacing:1px;color:#23718c}
+.toolbar{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:12px 0}
+button{font:inherit;font-size:12px;font-weight:650;color:#235066;cursor:pointer;border:1px solid #b7cbd5;border-radius:8px;background:#fff;padding:10px 7px}
+button:hover{background:#e8f5f9}button.active{background:#166480;border-color:#166480;color:#fff}
+.row{display:flex;justify-content:space-between;margin-top:12px;font-size:12px;gap:12px}output{color:#0a7090;font-variant-numeric:tabular-nums;font-weight:700}
+input[type=range]{width:100%;accent-color:#137695}
+label.toggle{display:block;font-size:12px;margin:10px 0}.toggle input{accent-color:#137695}
+#status{border-radius:9px;background:#e6f2f6;color:#174d65;padding:10px;font-size:11px;line-height:1.5;margin-top:10px}
+#status.error{color:#92382c;background:#fae8e6}
+.note{border-left:4px solid #d98942;background:#fff4e7;padding:10px 12px;border-radius:7px;font-size:11px;line-height:1.5;color:#785336}
+#badge{position:absolute;right:12px;bottom:12px;z-index:4;background:#09293ddd;color:#ebf5fa;border-radius:8px;padding:9px 12px;font-size:11px;max-width:340px}
+@media(max-width:700px){aside{width:auto;right:10px;top:8px;left:10px;max-height:49vh;padding:13px}h1{font-size:17px}#badge{left:10px;right:10px;bottom:8px}}
+</style></head>
+<body>
+<div id="map"></div>
+<aside>
+<div class="accent">Haus Memory · Tschugge / Zermatt</div>
+<h1>3D-Balkonblick</h1>
+<p>Satellitenbilder, 3D-Gelände und Gebäude von swisstopo. Das <b>orange Gebäude</b> ist ein vereinfachtes Modell des Bauprojekts auf Parzelle 2720.</p>
+<div class="toolbar">
+<button class="active" id="overview">3D-Übersicht</button>
+<button id="balcony">Blick vom Balkon</button>
+<button id="top">Draufsicht</button>
+<button id="village">Blick ins Dorf</button>
+</div>
+<div id="status">Lade 3D-Karte …</div>
+<h2>Sicht vom zweiten Balkon von unten</h2>
+<div class="row"><label for="bearing">Blickrichtung</label><output id="bearingV">105°</output></div>
+<input id="bearing" type="range" min="0" max="359" value="105">
+<div class="row"><label for="tilt">Neigung</label><output id="tiltV">−3°</output></div>
+<input id="tilt" type="range" min="-35" max="25" value="-3">
+<div class="row"><label for="eye">Augenhöhe gegenüber Neubau-Dach</label><output id="eyeV">+1,60 m</output></div>
+<input id="eye" type="range" min="-1" max="5" value="1.6" step=".1">
+<h2>Neubau untersuchen</h2>
+<label class="toggle"><input id="show" type="checkbox" checked> Neubau einblenden</label>
+<label class="toggle"><input id="buildings" type="checkbox" checked> Amtliche 3D-Gebäude einblenden</label>
+<div class="row"><label for="raise">Mögliche zusätzliche Dachhöhe</label><output id="raiseV">+0,0 m</output></div>
+<input id="raise" type="range" min="0" max="5" step=".25" value="0">
+<div class="row"><label for="east">Gebäudemodell Ost/West verschieben</label><output id="eastV">0,0 m</output></div>
+<input id="east" type="range" min="-15" max="15" step=".5" value="0">
+<div class="row"><label for="north">Gebäudemodell Nord/Süd verschieben</label><output id="northV">0,0 m</output></div>
+<input id="north" type="range" min="-15" max="15" step=".5" value="0">
+<div class="row"><label for="vertical">Höhenkorrektur Modell</label><output id="verticalV">0,0 m</output></div>
+<input id="vertical" type="range" min="-10" max="10" step=".5" value="0">
+<button style="width:100%;margin:13px 0" id="reset">Alle Annahmen zurücksetzen</button>
+<div class="note"><b>Wichtiger Hinweis:</b> Die Balkonposition ist angenähert, die Meereshöhen stammen aus dem Architektenschnitt. Dachform und Gebäudegrundriss sind vereinfacht. Die Karte ist eine Arbeitsvisualisierung, <b>kein vermessungstechnischer Sichtnachweis für die Einsprache.</b></div>
+<p><small>Quellen: swisstopo swissIMAGE, swissBUILDINGS3D, 3D-Terrain. Dach Neubau: 1'681,675 m ü. M.; Dach Memory: ca. 1'691,80 m ü. M., gemäss Schnitt vom 03.11.2026.</small></p>
+</aside>
+<div id="badge">Maus: drehen, kippen und zoomen · Zweiter Balkon von unten</div>
+<script>
+(function(){
+"use strict";
+const $ = s => document.getElementById(s);
+const P = {
+memory:[[7.743981853,46.02083773],[7.744133433,46.020818105],[7.744096864,46.020676542],[7.743943911,46.020695219]],
+building:[[7.744227902,46.020809962],[7.744313809,46.020799712],[7.744284263,46.020679611],[7.74419834,46.020689856]],
+annex:[[7.744304862,46.020728252],[7.744331588,46.020725492],[7.744319057,46.020674513],[7.744291696,46.020677775]],
+balcony:[7.744133077,46.020749344],center:[7.744256078,46.020744785]
+};
+let viewer=null,tiles=null,model=[],extras=[],modelOffset=0,shift=0,mode="overview";
+const deg=n=>n*Math.PI/180;
+const fmt=n=>n.toFixed(1).replace(".",",")+" m";
+const current=()=>({bearing:+$("bearing").value,tilt:+$("tilt").value,eye:+$("eye").value,raise:+$("raise").value,east:+$("east").value,north:+$("north").value,vertical:+$("vertical").value});
+function status(message,error){$("status").textContent=message;$("status").classList.toggle("error",!!error)}
+function lonlat(p,offset){if(!offset)return p;return [p[0]+(+$("east").value)/(111320*Math.cos(deg(p[1]))),p[1]+(+$("north").value)/111320]}
+function pos(p,h,offset=false){let q=lonlat(p,offset);return Cesium.Cartesian3.fromDegrees(q[0],q[1],h+shift+(offset?+$("vertical").value:0))}
+function clear(arr){arr.forEach(e=>viewer.entities.remove(e));arr.length=0}
+function draw(){
+if(!viewer)return;clear(model);const z=+$("raise").value;
+const color=Cesium.Color.fromCssColorString("#e57a36").withAlpha(.87);
+model.push(viewer.entities.add({name:"Neubau, vereinfachte Kubatur",polygon:{
+hierarchy:new Cesium.PolygonHierarchy(P.building.map(p=>pos(p,1680.15+z,true))),perPositionHeight:true,
+extrudedHeight:1672.10+shift+(+$("vertical").value),material:color,outline:true,outlineColor:Cesium.Color.ORANGE}}));
+const A=P.building;const M=[[(A[0][0]+A[1][0])/2,(A[0][1]+A[1][1])/2],[(A[2][0]+A[3][0])/2,(A[2][1]+A[3][1])/2]];
+function face(coords,heights,hex){model.push(viewer.entities.add({name:"Schematisches Satteldach",polygon:{
+hierarchy:new Cesium.PolygonHierarchy(coords.map((p,i)=>pos(p,heights[i]+z,true))),
+perPositionHeight:true,material:Cesium.Color.fromCssColorString(hex).withAlpha(.95),
+outline:true,outlineColor:Cesium.Color.DARKORANGE}}))}
+face([A[0],M[0],M[1],A[3]],[1680.15,1681.675,1681.675,1680.15],"#d76d35");
+face([M[0],A[1],A[2],M[1]],[1681.675,1680.15,1680.15,1681.675],"#b5522c");
+model.push(viewer.entities.add({name:"Schematischer Anbau",polygon:{hierarchy:new Cesium.PolygonHierarchy(P.annex.map(p=>pos(p,1677,true))),perPositionHeight:true,extrudedHeight:1672+shift+(+$("vertical").value),material:Cesium.Color.fromCssColorString("#eeaa67").withAlpha(.85)}}));
+model.forEach(e=>e.show=$("show").checked);
+}
+function mark(){if(!viewer)return;clear(extras);
+extras.push(viewer.entities.add({name:"Haus Memory – Umriss angenähert",polyline:{positions:P.memory.concat([P.memory[0]]).map(p=>pos(p,1685)),width:3,material:Cesium.Color.CYAN}}));
+extras.push(viewer.entities.add({name:"Balkon – Position angenähert",position:pos(P.balcony,1681.675+(+$("eye").value)),point:{pixelSize:12,color:Cesium.Color.YELLOW,outlineColor:Cesium.Color.BLACK,outlineWidth:2},label:{text:"Balkon – angenähert",font:"13px sans-serif",pixelOffset:new Cesium.Cartesian2(0,-19),style:Cesium.LabelStyle.FILL_AND_OUTLINE,outlineWidth:2,disableDepthTestDistance:1200}}));
+}
+function camera(where){
+if(!viewer)return;mode=where;
+if(where==="overview"){
+viewer.camera.flyTo({destination:pos([P.center[0]-.00026,P.center[1]-.00025],1720),orientation:{heading:deg(65),pitch:deg(-35),roll:0},duration:1.2});
+}else if(where==="top"){
+viewer.camera.flyTo({destination:pos(P.center,1720),orientation:{heading:0,pitch:deg(-90),roll:0},duration:1});
+}else{
+const h=where==="village"?110:+$("bearing").value,t=where==="village"?-5:+$("tilt").value;
+viewer.camera.setView({destination:pos(P.balcony,1681.675+(+$("eye").value)),orientation:{heading:deg(h),pitch:deg(t),roll:0}});
+}
+["overview","balcony","top","village"].forEach(x=>$(x).classList.toggle("active",x===where));
+}
+["overview","balcony","top","village"].forEach(n=>$(n).onclick=()=>camera(n));
+$("show").onchange=()=>model.forEach(e=>e.show=$("show").checked);
+$("buildings").onchange=()=>{if(tiles)tiles.show=$("buildings").checked};
+["bearing","tilt","eye","raise","east","north","vertical"].forEach(id=>{
+$(id).oninput=()=>{
+const v=+$(id).value;
+const out=$(id+"V");
+out.textContent=id==="bearing"||id==="tilt"?v+"°":(v>=0?"+":"")+fmt(v);
+if(id==="raise"||id==="east"||id==="north"||id==="vertical")draw();
+if(id==="eye"){mark();}
+if(["bearing","tilt","eye"].includes(id)){camera("balcony");}
+};
+});
+$("reset").onclick=()=>{
+[["bearing",105],["tilt",-3],["eye",1.6],["raise",0],["east",0],["north",0],["vertical",0]].forEach(v=>{ $(v[0]).value=v[1];$(v[0]).dispatchEvent(new Event("input"));});
+camera("overview")};
+async function init(){
+if(!window.Cesium){status("3D-Bibliothek konnte nicht geladen werden. Bitte Seite neu laden.",true);return;}
+const C=Cesium;let terrain;let terrainOK=true;
+try{terrain=await C.CesiumTerrainProvider.fromUrl("https://3d.geo.admin.ch/ch.swisstopo.terrain.3d/v1/");}
+catch(e){terrain=new C.EllipsoidTerrainProvider();terrainOK=false;}
+const imagery=new C.UrlTemplateImageryProvider({
+url:"https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage/default/current/3857/{z}/{x}/{y}.jpeg",
+tilingScheme:new C.WebMercatorTilingScheme(),maximumLevel:20,credit:"© swisstopo"});
+try{
+viewer=new C.Viewer("map",{baseLayerPicker:false,baseLayer:new C.ImageryLayer(imagery),terrainProvider:terrain,
+animation:false,timeline:false,homeButton:false,geocoder:false,sceneModePicker:false,selectionIndicator:false,infoBox:false,
+navigationHelpButton:false,fullscreenButton:true,requestRenderMode:false});
+viewer.scene.screenSpaceCameraController.enableCollisionDetection=false;
+viewer.scene.globe.depthTestAgainstTerrain=true;
+}catch(e){status("Fehler beim Start der Karte: "+e.message,true);return;}
+if(terrainOK)try{
+const pp=C.Cartographic.fromDegrees(P.center[0],P.center[1]);
+let sampled=await C.sampleTerrainMostDetailed(terrain,[pp]);
+if(Number.isFinite(sampled[0].height))shift=sampled[0].height-1672.10;
+}catch(e){}
+draw();mark();camera("overview");
+status(terrainOK?"3D-Gelände und Satellitenbild geladen.":"Satellitenbild geladen; 3D-Gelände ist zurzeit nicht verfügbar.",!terrainOK);
+try{
+tiles=await C.Cesium3DTileset.fromUrl("https://3d.geo.admin.ch/ch.swisstopo.swissbuildings3d.3d/v1/tileset.json",{maximumScreenSpaceError:8});
+viewer.scene.primitives.add(tiles);
+status("Karte und amtliche 3D-Gebäude geladen. Wähle «Blick vom Balkon».");}
+catch(e){status("Karte geladen. 3D-Gebäude konnten nicht geladen werden: "+e.message,true)}
+}
+init();
+})();
+</script>
+</body></html>
