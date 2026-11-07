@@ -13,7 +13,7 @@ small{color:#6b7c86;font-size:11px}h1{font-size:20px;margin:0 0 6px}h2{font-size
 .accent{font-size:11px;text-transform:uppercase;font-weight:800;letter-spacing:1px;color:#23718c}
 .toolbar{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:12px 0}
 button{font:inherit;font-size:12px;font-weight:650;color:#235066;cursor:pointer;border:1px solid #b7cbd5;border-radius:8px;background:#fff;padding:10px 7px}
-button:hover{background:#e8f5f9}button.active{background:#166480;border-color:#166480;color:#fff}
+button:hover{background:#e8f5f9}button.active{background:#166480;border-color:#166480;color:#fff}button:disabled{opacity:.4;cursor:not-allowed;background:#edf1f3}
 .row{display:flex;justify-content:space-between;margin-top:12px;font-size:12px;gap:12px}output{color:#0a7090;font-variant-numeric:tabular-nums;font-weight:700}
 input[type=range]{width:100%;accent-color:#137695}
 label.toggle{display:block;font-size:12px;margin:10px 0}.toggle input{accent-color:#137695}
@@ -36,13 +36,25 @@ label.toggle{display:block;font-size:12px;margin:10px 0}.toggle input{accent-col
 <button id="village">Blick ins Dorf</button>
 </div>
 <div id="status">Lade 3D-Karte …</div>
-<h2>Sicht vom zweiten Balkon von unten</h2>
+<h2>Stockwerke wechseln · Haus Memory</h2>
+<div class="toolbar" style="grid-template-columns:1fr 1fr">
+<button id="floorDown" title="Zur nächsten tieferen Etage">↓ Eine Etage</button>
+<button id="floorUp" title="Zur nächsten höheren Etage">↑ Eine Etage</button>
+</div>
+<div class="row"><strong id="floorName">2. Balkon von unten (Ausgangspunkt)</strong><output id="floorV">±0</output></div>
+<div class="row"><label for="floorStep">Geschosshöhe (Boden zu Boden)</label><output id="floorStepV">2,8 m</output></div>
+<input id="floorStep" type="range" min="2.4" max="3.4" step=".1" value="2.8">
+<p style="margin:4px 0 8px"><small>2,4 m ist die ungefähre <b>Raumhöhe innen</b>. Der Abstand von einem Geschossboden zum nächsten ist wegen der Deckenkonstruktion normalerweise grösser. 2,8 m ist hier ein veränderbarer Startwert.</small></p>
+<div class="row"><label for="fine">Senkrecht fein verschieben</label><output id="fineV">+0,0 m</output></div>
+<input id="fine" type="range" min="-2" max="2" step=".1" value="0">
+<div class="row"><label>Ungefähre Kamerahöhe</label><output id="cameraHeightV">1’683,28 m ü. M.</output></div>
+<h2>Blickrichtung und Augenhöhe</h2>
 <div class="row"><label for="bearing">Blickrichtung</label><output id="bearingV">105°</output></div>
 <input id="bearing" type="range" min="0" max="359" value="105">
 <div class="row"><label for="tilt">Neigung</label><output id="tiltV">−3°</output></div>
 <input id="tilt" type="range" min="-35" max="25" value="-3">
-<div class="row"><label for="eye">Augenhöhe gegenüber Neubau-Dach</label><output id="eyeV">+1,60 m</output></div>
-<input id="eye" type="range" min="-1" max="5" value="1.6" step=".1">
+<div class="row"><label for="eye">Augenhöhe über dem Balkonboden</label><output id="eyeV">+1,60 m</output></div>
+<input id="eye" type="range" min="1" max="2.1" value="1.6" step=".1">
 <h2>Neubau untersuchen</h2>
 <label class="toggle"><input id="show" type="checkbox" checked> Neubau einblenden</label>
 <label class="toggle"><input id="buildings" type="checkbox" checked> Amtliche 3D-Gebäude einblenden</label>
@@ -55,7 +67,7 @@ label.toggle{display:block;font-size:12px;margin:10px 0}.toggle input{accent-col
 <div class="row"><label for="vertical">Höhenkorrektur Modell</label><output id="verticalV">0,0 m</output></div>
 <input id="vertical" type="range" min="-10" max="10" step=".5" value="0">
 <button style="width:100%;margin:13px 0" id="reset">Alle Annahmen zurücksetzen</button>
-<div class="note"><b>Wichtiger Hinweis:</b> Die Balkonposition ist angenähert, die Meereshöhen stammen aus dem Architektenschnitt. Dachform und Gebäudegrundriss sind vereinfacht. Die Karte ist eine Arbeitsvisualisierung, <b>kein vermessungstechnischer Sichtnachweis für die Einsprache.</b></div>
+<div class="note"><b>Wichtiger Hinweis:</b> Ausgangspunkt ist der zweite Balkon von unten. Seine genaue Fussbodenhöhe ist nicht vermessen und wird im Modell vorläufig mit der Dachkote des Neubaus gleichgesetzt. Auch die Stockwerkabstände sind Annahmen. Die Balkonposition ist angenähert, die übrigen Meereshöhen stammen aus dem Architektenschnitt. Dachform und Gebäudegrundriss sind vereinfacht. Die Karte ist eine Arbeitsvisualisierung, <b>kein vermessungstechnischer Sichtnachweis für die Einsprache.</b></div>
 <p><small>Quellen: swisstopo swissIMAGE, swissBUILDINGS3D, 3D-Terrain. Dach Neubau: 1'681,675 m ü. M.; Dach Memory: ca. 1'691,80 m ü. M., gemäss Schnitt vom 03.11.2026.</small></p>
 </aside>
 <div id="badge">Maus: drehen, kippen und zoomen · Zweiter Balkon von unten</div>
@@ -70,6 +82,23 @@ annex:[[7.744304862,46.020728252],[7.744331588,46.020725492],[7.744319057,46.020
 balcony:[7.744133077,46.020749344],center:[7.744256078,46.020744785]
 };
 let viewer=null,tiles=null,model=[],extras=[],modelOffset=0,shift=0,mode="overview";
+let floorDelta=0;
+const FLOOR_REFERENCE=1681.675, MIN_DELTA=-1, MAX_DELTA=3;
+const floorSpacing=()=>+$("floorStep").value;
+const balconyAltitude=()=>FLOOR_REFERENCE+floorDelta*floorSpacing()+(+$("eye").value)+(+$("fine").value);
+function updateFloorUI(){
+ const where=floorDelta===0?"2. Balkon von unten (Ausgangspunkt)"
+ :floorDelta===-1?"1. Balkon von unten (angenähert)"
+ :floorDelta>0?(floorDelta+" Etage"+(floorDelta>1?"n":"")+" über Ausgangsbalkon"):"Tiefere Etage (angenähert)";
+ $("floorName").textContent=where;
+ $("floorV").textContent=floorDelta===0?"±0":(floorDelta>0?"+":"")+floorDelta+" Geschoss"+(Math.abs(floorDelta)===1?"":"e");
+ $("floorDown").disabled=floorDelta<=MIN_DELTA;
+ $("floorUp").disabled=floorDelta>=MAX_DELTA;
+ $("cameraHeightV").textContent=balconyAltitude().toFixed(2).replace(".",",")+" m ü. M.";
+ $("floorStepV").textContent=floorSpacing().toFixed(1).replace(".",",")+" m";
+ $("fineV").textContent=(+$("fine").value>=0?"+":"")+(+$("fine").value).toFixed(1).replace(".",",")+" m";
+}
+function updateBalconyView(){updateFloorUI();if(viewer){mark();camera("balcony")}}
 const deg=n=>n*Math.PI/180;
 const fmt=n=>n.toFixed(1).replace(".",",")+" m";
 const current=()=>({bearing:+$("bearing").value,tilt:+$("tilt").value,eye:+$("eye").value,raise:+$("raise").value,east:+$("east").value,north:+$("north").value,vertical:+$("vertical").value});
@@ -95,7 +124,7 @@ model.forEach(e=>e.show=$("show").checked);
 }
 function mark(){if(!viewer)return;clear(extras);
 extras.push(viewer.entities.add({name:"Haus Memory – Umriss angenähert",polyline:{positions:P.memory.concat([P.memory[0]]).map(p=>pos(p,1685)),width:3,material:Cesium.Color.CYAN}}));
-extras.push(viewer.entities.add({name:"Balkon – Position angenähert",position:pos(P.balcony,1681.675+(+$("eye").value)),point:{pixelSize:12,color:Cesium.Color.YELLOW,outlineColor:Cesium.Color.BLACK,outlineWidth:2},label:{text:"Balkon – angenähert",font:"13px sans-serif",pixelOffset:new Cesium.Cartesian2(0,-19),style:Cesium.LabelStyle.FILL_AND_OUTLINE,outlineWidth:2,disableDepthTestDistance:1200}}));
+extras.push(viewer.entities.add({name:"Balkon – Position angenähert",position:pos(P.balcony,balconyAltitude()),point:{pixelSize:12,color:Cesium.Color.YELLOW,outlineColor:Cesium.Color.BLACK,outlineWidth:2},label:{text:"Balkon – angenähert",font:"13px sans-serif",pixelOffset:new Cesium.Cartesian2(0,-19),style:Cesium.LabelStyle.FILL_AND_OUTLINE,outlineWidth:2,disableDepthTestDistance:1200}}));
 }
 function camera(where){
 if(!viewer)return;mode=where;
@@ -105,11 +134,15 @@ viewer.camera.flyTo({destination:pos([P.center[0]-.00026,P.center[1]-.00025],172
 viewer.camera.flyTo({destination:pos(P.center,1720),orientation:{heading:0,pitch:deg(-90),roll:0},duration:1});
 }else{
 const h=where==="village"?110:+$("bearing").value,t=where==="village"?-5:+$("tilt").value;
-viewer.camera.setView({destination:pos(P.balcony,1681.675+(+$("eye").value)),orientation:{heading:deg(h),pitch:deg(t),roll:0}});
+viewer.camera.setView({destination:pos(P.balcony,balconyAltitude()),orientation:{heading:deg(h),pitch:deg(t),roll:0}});
 }
 ["overview","balcony","top","village"].forEach(x=>$(x).classList.toggle("active",x===where));
 }
 ["overview","balcony","top","village"].forEach(n=>$(n).onclick=()=>camera(n));
+$("floorDown").onclick=()=>{floorDelta=Math.max(MIN_DELTA,floorDelta-1);updateBalconyView()};
+$("floorUp").onclick=()=>{floorDelta=Math.min(MAX_DELTA,floorDelta+1);updateBalconyView()};
+$("floorStep").oninput=()=>updateBalconyView();
+$("fine").oninput=()=>updateBalconyView();
 $("show").onchange=()=>model.forEach(e=>e.show=$("show").checked);
 $("buildings").onchange=()=>{if(tiles)tiles.show=$("buildings").checked};
 ["bearing","tilt","eye","raise","east","north","vertical"].forEach(id=>{
@@ -123,8 +156,9 @@ if(["bearing","tilt","eye"].includes(id)){camera("balcony");}
 };
 });
 $("reset").onclick=()=>{
+floorDelta=0;$("floorStep").value=2.8;$("fine").value=0;
 [["bearing",105],["tilt",-3],["eye",1.6],["raise",0],["east",0],["north",0],["vertical",0]].forEach(v=>{ $(v[0]).value=v[1];$(v[0]).dispatchEvent(new Event("input"));});
-camera("overview")};
+updateFloorUI();camera("overview")};
 async function init(){
 if(!window.Cesium){status("3D-Bibliothek konnte nicht geladen werden. Bitte Seite neu laden.",true);return;}
 const C=Cesium;let terrain;let terrainOK=true;
@@ -145,7 +179,7 @@ const pp=C.Cartographic.fromDegrees(P.center[0],P.center[1]);
 let sampled=await C.sampleTerrainMostDetailed(terrain,[pp]);
 if(Number.isFinite(sampled[0].height))shift=sampled[0].height-1672.10;
 }catch(e){}
-draw();mark();camera("overview");
+draw();mark();updateFloorUI();camera("overview");
 status(terrainOK?"3D-Gelände und Satellitenbild geladen.":"Satellitenbild geladen; 3D-Gelände ist zurzeit nicht verfügbar.",!terrainOK);
 try{
 tiles=await C.Cesium3DTileset.fromUrl("https://3d.geo.admin.ch/ch.swisstopo.swissbuildings3d.3d/v1/tileset.json",{maximumScreenSpaceError:8});
